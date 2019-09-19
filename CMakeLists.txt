@@ -5,10 +5,13 @@ if (MSVC)
   add_compile_options(/W4 /permissive-)
 endif()
 
+find_package(glfw3 CONFIG REQUIRED)
+find_package(Vulkan REQUIRED)
+
 add_subdirectory(third_party/fmt-6.0.0 EXCLUDE_FROM_ALL)
 
 add_executable(vulkan-hello-triangle source/main.cpp)
-target_link_libraries(vulkan-hello-triangle PRIVATE fmt-header-only)
+target_link_libraries(vulkan-hello-triangle PRIVATE fmt-header-only glfw Vulkan::Vulkan)
 target_compile_features(vulkan-hello-triangle PUBLIC cxx_std_17)
 
 set_target_properties(vulkan-hello-triangle PROPERTIES
