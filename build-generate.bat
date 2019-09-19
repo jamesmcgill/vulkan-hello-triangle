@@ -4,6 +4,10 @@
 @echo off
 set BASE_PATH=%~dp0
 set BUILD_PATH=%BASE_PATH%build\
+set GENERATOR="Visual Studio 16 2019"
+
+:: This script needs vcpkg and needs to know where it is installed
+if [%VCPKG_PATH%] == [] goto MISSING_VCPKG
 
 :: Delete any existing cache (by deleting entire build directory)
 if not exist %BUILD_PATH% goto MISSING_BUILD_DIR
@@ -15,44 +19,32 @@ if not exist %BUILD_PATH% mkdir %BUILD_PATH%
 
 
 :: Generate new cache
-:: looks for different versions of MSVC (newest first)
 pushd %BUILD_PATH%
-
 echo.
-echo Looking for Visual Studio 16 2019
-call cmake -G "Visual Studio 16 2019" .. && (
+echo Using generator: %GENERATOR%
+call cmake -A x64 -G %GENERATOR% .. -DCMAKE_TOOLCHAIN_FILE=%VCPKG_PATH%/scripts/buildsystems/vcpkg.cmake && (
 popd
 goto SUCCESS
 ) || (
 del CMakeCache.txt
 )
 
-echo.
-echo Looking for Visual Studio 15 2017
-call cmake -G "Visual Studio 15 2017" .. && (
-popd
-goto SUCCESS
-) || (
-del CMakeCache.txt
-)
-
-echo.
-echo Looking for Visual Studio 14 2015
-call cmake -G "Visual Studio 14 2015" .. && (
-popd
-goto SUCCESS
-) || (
-del CMakeCache.txt
-)
-
-
-:: No MSVC found
+:: CMake failed if we reached this point
 popd
 echo.
 echo.
-echo Couldn't find any supported MSVC compiler on the PATH
+echo If CMake errors are related to not finding any supported MSVC compiler
 echo Check you are in the vsdevcmd shell
 echo Check this file (build-generate.bat) supports your vsdevcmd compiler version (add if necessary)
+exit
+
+
+:MISSING_VCPKG
+echo.
+echo This script assumes vcpkg is used to provide build dependencies
+echo (https://github.com/Microsoft/vcpkg)
+echo - Please install vcpkg and create an environment variable VCPKG_PATH pointing to it
+echo.
 exit
 
 :SUCCESS
