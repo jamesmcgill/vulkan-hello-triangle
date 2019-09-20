@@ -25,8 +25,9 @@ call %BASE_PATH%build-generate.bat
 :BUILD
 pushd %BUILD_PATH%
 echo.
-cmake --build . --config %BUILD_TARGET%
+call cmake --build . --config %BUILD_TARGET% && (
 .\%BUILD_TARGET%\%EXE_NAME%.exe
+)
 popd
 
 echo.
