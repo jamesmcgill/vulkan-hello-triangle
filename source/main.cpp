@@ -94,7 +94,7 @@ populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
 }
 
 //------------------------------------------------------------------------------
-VkResult
+void
 setupDebugMessenger(VkInstance& instance)
 {
   assert(ENABLE_VALIDATION_LAYERS);
@@ -102,8 +102,13 @@ setupDebugMessenger(VkInstance& instance)
   VkDebugUtilsMessengerCreateInfoEXT createInfo;
   populateDebugMessengerCreateInfo(createInfo);
 
-  return CreateDebugUtilsMessengerEXT(
-    instance, &createInfo, nullptr, &sg_debugMessenger);
+  if (
+    CreateDebugUtilsMessengerEXT(
+      instance, &createInfo, nullptr, &sg_debugMessenger)
+    != VK_SUCCESS)
+  {
+    throw std::runtime_error("failed to set up debug messenger!");
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -154,12 +159,12 @@ getRequiredExtensions()
 }
 
 //------------------------------------------------------------------------------
-VkResult
+void
 createInstance(VkInstance& instance)
 {
   if (ENABLE_VALIDATION_LAYERS && !checkValidationLayerSupport())
   {
-    return VK_ERROR_LAYER_NOT_PRESENT;
+    throw std::runtime_error("validation layers requested, but not available!");
   }
 
   auto reqExtensions = getRequiredExtensions();
@@ -205,7 +210,10 @@ createInstance(VkInstance& instance)
     createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
   }
 
-  return vkCreateInstance(&createInfo, nullptr, &instance);
+  if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
+  {
+    throw std::runtime_error("Couldn't create VkInstance!");
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -304,53 +312,79 @@ pickPhysicalDevice(VkInstance& instance)
     throw std::runtime_error("failed to find a suitable GPU!");
   }
 }
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+class Application
+{
+  GLFWwindow* m_window = nullptr;
+  VkInstance m_instance = VK_NULL_HANDLE;
+
+  //----------------------------------------------------------------------------
+  void cleanup()
+  {
+    if (ENABLE_VALIDATION_LAYERS)
+    {
+      DestroyDebugUtilsMessengerEXT(m_instance, sg_debugMessenger, nullptr);
+    }
+    vkDestroyInstance(m_instance, nullptr);
+    glfwDestroyWindow(m_window);
+    glfwTerminate();
+  }
+
+  //----------------------------------------------------------------------------
+
+public:
+  ~Application() { cleanup(); }
+
+  //----------------------------------------------------------------------------
+  void init()
+  {
+    glfwInit();
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);    // not using OpenGL
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);      // not resizable
+
+    m_window = glfwCreateWindow(
+      WINDOW_WIDTH, WINDOW_HEIGHT, "Vulkan hello triangle", nullptr, nullptr);
+
+    createInstance(m_instance);
+    if (ENABLE_VALIDATION_LAYERS)
+    {
+      setupDebugMessenger(m_instance);
+    }
+    pickPhysicalDevice(m_instance);
+  }
+
+  //----------------------------------------------------------------------------
+  void run()
+  {
+    while (!glfwWindowShouldClose(m_window))
+    {
+      glfwPollEvents();
+    }
+  }
+};
+
+//------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 int
 main()
 {
-  glfwInit();
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);    // not using OpenGL
-  glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);      // not resizable
-  GLFWwindow* window = glfwCreateWindow(
-    WINDOW_WIDTH, WINDOW_HEIGHT, "Vulkan hello triangle", nullptr, nullptr);
-
-  VkInstance instance;
-  if (createInstance(instance) != VK_SUCCESS)
-  {
-    fmt::print("Couldn't create VkInstance. Terminating\n");
-    goto cleanup;
-  }
-
-  if (ENABLE_VALIDATION_LAYERS && setupDebugMessenger(instance) != VK_SUCCESS)
-  {
-    fmt::print("failed to set up debug messenger. Terminating\n");
-    goto cleanup;
-  }
-
   try
   {
-    pickPhysicalDevice(instance);
+    Application app;
+    app.init();
+
+    app.run();
   }
   catch (const std::exception& e)
   {
     fmt::print("{}\n", e.what());
-    goto cleanup;
+    return EXIT_FAILURE;
   }
-
-  while (!glfwWindowShouldClose(window))
-  {
-    glfwPollEvents();
-  }
-
-cleanup:
-  if (ENABLE_VALIDATION_LAYERS)
-  {
-    DestroyDebugUtilsMessengerEXT(instance, sg_debugMessenger, nullptr);
-  }
-  vkDestroyInstance(instance, nullptr);
-  glfwDestroyWindow(window);
-  glfwTerminate();
 
   return EXIT_SUCCESS;
 }
+
+//------------------------------------------------------------------------------
