@@ -24,6 +24,13 @@ constexpr bool ENABLE_VALIDATION_LAYERS = true;
 #endif
 
 //------------------------------------------------------------------------------
+struct QueueFamilyIndices
+{
+  std::optional<uint32_t> graphicsFamily;
+  bool isComplete() { return graphicsFamily.has_value(); }
+};
+
+//------------------------------------------------------------------------------
 static VkDebugUtilsMessengerEXT sg_debugMessenger;
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL
@@ -217,8 +224,6 @@ createInstance(VkInstance& instance)
 }
 
 //------------------------------------------------------------------------------
-using QueueFamilyIndices = std::optional<uint32_t>;
-
 QueueFamilyIndices
 findQueueFamilies(const VkPhysicalDevice& device)
 {
@@ -238,10 +243,10 @@ findQueueFamilies(const VkPhysicalDevice& device)
       queueFamily.queueCount > 0
       && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
     {
-      indices = i;
+      indices.graphicsFamily = i;
     }
 
-    if (indices.has_value())
+    if (indices.isComplete())
     {
       break;
     }
@@ -263,7 +268,7 @@ rateDeviceSuitability(const VkPhysicalDevice& device)
 
   // Hard requirements
   QueueFamilyIndices indices = findQueueFamilies(device);
-  if (!indices.has_value())
+  if (!indices.isComplete())
   {
     return 0;
   }
@@ -280,7 +285,7 @@ rateDeviceSuitability(const VkPhysicalDevice& device)
 }
 
 //------------------------------------------------------------------------------
-void
+VkPhysicalDevice
 pickPhysicalDevice(VkInstance& instance)
 {
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -311,18 +316,67 @@ pickPhysicalDevice(VkInstance& instance)
   {
     throw std::runtime_error("failed to find a suitable GPU!");
   }
+
+  return physicalDevice;
 }
+
+//------------------------------------------------------------------------------
+void
+createLogicalDevice(
+  VkDevice& device,
+  VkQueue& graphicsQueue, const VkPhysicalDevice& physicalDevice)
+{
+  float queuePriority = 1.0f;
+
+  QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+
+  VkDeviceQueueCreateInfo queueCreateInfo = {};
+  queueCreateInfo.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+  queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+  queueCreateInfo.queueCount       = 1;
+  queueCreateInfo.pQueuePriorities = &queuePriority;
+
+  VkPhysicalDeviceFeatures deviceFeatures = {};
+
+  VkDeviceCreateInfo createInfo   = {};
+  createInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+  createInfo.pQueueCreateInfos    = &queueCreateInfo;
+  createInfo.queueCreateInfoCount = 1;
+  createInfo.pEnabledFeatures     = &deviceFeatures;
+
+  createInfo.enabledExtensionCount = 0;
+  if (ENABLE_VALIDATION_LAYERS)
+  {
+    createInfo.enabledLayerCount
+      = static_cast<uint32_t>(VALIDATION_LAYERS.size());
+    createInfo.ppEnabledLayerNames = VALIDATION_LAYERS.data();
+  }
+
+  if (
+    vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS)
+  {
+    throw std::runtime_error("failed to create logical device!");
+  }
+
+    vkGetDeviceQueue(
+    device, indices.graphicsFamily.value(), 0, &graphicsQueue);
+}
+
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 class Application
 {
-  GLFWwindow* m_window = nullptr;
-  VkInstance m_instance = VK_NULL_HANDLE;
+  GLFWwindow* m_window              = nullptr;
+  VkInstance m_instance             = VK_NULL_HANDLE;
+  VkPhysicalDevice m_physicalDevice;
+  VkDevice m_device                   = VK_NULL_HANDLE;
+  VkQueue m_graphicsQueue;
 
   //----------------------------------------------------------------------------
   void cleanup()
   {
+    vkDestroyDevice(m_device, nullptr);
     if (ENABLE_VALIDATION_LAYERS)
     {
       DestroyDebugUtilsMessengerEXT(m_instance, sg_debugMessenger, nullptr);
@@ -352,7 +406,8 @@ public:
     {
       setupDebugMessenger(m_instance);
     }
-    pickPhysicalDevice(m_instance);
+    m_physicalDevice = pickPhysicalDevice(m_instance);
+    createLogicalDevice(m_device, m_graphicsQueue, m_physicalDevice);
   }
 
   //----------------------------------------------------------------------------
