@@ -254,10 +254,6 @@ rateDeviceSuitability(const VkPhysicalDevice& device)
   vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
   // Hard requirements
-  if (!deviceFeatures.geometryShader)
-  {
-    return 0;
-  }
   QueueFamilyIndices indices = findQueueFamilies(device);
   if (!indices.has_value())
   {
