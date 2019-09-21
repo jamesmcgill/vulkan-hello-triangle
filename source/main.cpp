@@ -1,5 +1,7 @@
 #include <fmt/format.h>
 #include <vector>
+#include <map>
+#include <optional>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -207,6 +209,107 @@ createInstance(VkInstance& instance)
 }
 
 //------------------------------------------------------------------------------
+using QueueFamilyIndices = std::optional<uint32_t>;
+
+QueueFamilyIndices
+findQueueFamilies(const VkPhysicalDevice& device)
+{
+  QueueFamilyIndices indices;
+
+  uint32_t queueFamilyCount = 0;
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+  vkGetPhysicalDeviceQueueFamilyProperties(
+    device, &queueFamilyCount, queueFamilies.data());
+
+  int i = 0;
+  for (const auto& queueFamily : queueFamilies)
+  {
+    if (
+      queueFamily.queueCount > 0
+      && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+    {
+      indices = i;
+    }
+
+    if (indices.has_value())
+    {
+      break;
+    }
+    i++;
+  }
+
+  return indices;
+}
+
+//------------------------------------------------------------------------------
+int
+rateDeviceSuitability(const VkPhysicalDevice& device)
+{
+  VkPhysicalDeviceProperties deviceProperties;
+  vkGetPhysicalDeviceProperties(device, &deviceProperties);
+
+  VkPhysicalDeviceFeatures deviceFeatures;
+  vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+  // Hard requirements
+  if (!deviceFeatures.geometryShader)
+  {
+    return 0;
+  }
+  QueueFamilyIndices indices = findQueueFamilies(device);
+  if (!indices.has_value())
+  {
+    return 0;
+  }
+
+  // Optional features weighted by value
+  int score = 0;
+  if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+  {
+    score += 1000;
+  }
+  score += deviceProperties.limits.maxImageDimension2D;
+
+  return score;
+}
+
+//------------------------------------------------------------------------------
+void
+pickPhysicalDevice(VkInstance& instance)
+{
+  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+
+  uint32_t deviceCount = 0;
+  vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
+  if (deviceCount == 0)
+  {
+    throw std::runtime_error("failed to find GPUs with Vulkan support!");
+  }
+
+  std::vector<VkPhysicalDevice> devices(deviceCount);
+  vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+  std::multimap<int, VkPhysicalDevice> devicesByScore;
+  for (const auto& device : devices)
+  {
+    int score = rateDeviceSuitability(device);
+    devicesByScore.insert(std::make_pair(score, device));
+  }
+
+  if (!devicesByScore.empty() && devicesByScore.rbegin()->first > 0)
+  {
+    physicalDevice = devicesByScore.rbegin()->second;
+  }
+  else
+  {
+    throw std::runtime_error("failed to find a suitable GPU!");
+  }
+}
+
+//------------------------------------------------------------------------------
 int
 main()
 {
@@ -229,6 +332,16 @@ main()
     goto cleanup;
   }
 
+  try
+  {
+    pickPhysicalDevice(instance);
+  }
+  catch (const std::exception& e)
+  {
+    fmt::print("{}\n", e.what());
+    goto cleanup;
+  }
+
   while (!glfwWindowShouldClose(window))
   {
     glfwPollEvents();
@@ -243,5 +356,5 @@ cleanup:
   glfwDestroyWindow(window);
   glfwTerminate();
 
-  return 0;
+  return EXIT_SUCCESS;
 }
