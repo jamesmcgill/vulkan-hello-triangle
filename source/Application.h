@@ -40,6 +40,7 @@ class Application
   VkQueue m_presentQueue;
   VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
   std::vector<VkImage> m_swapChainImages;
+  std::vector<VkImageView> m_swapChainImageViews;
   VkFormat m_swapChainImageFormat;
   VkExtent2D m_swapChainExtent; 
 
@@ -55,6 +56,8 @@ class Application
   int rateDeviceSuitability(const VkPhysicalDevice& device);
   bool checkDeviceExtensionSupport(const VkPhysicalDevice& device);
 
+  void createLogicalDevice();
+
   void createSwapChain();
   SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
   VkSurfaceFormatKHR chooseSwapSurfaceFormat(
@@ -63,7 +66,7 @@ class Application
     const std::vector<VkPresentModeKHR>& availablePresentModes);
   VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
-  void createLogicalDevice();
+  void createImageViews();
   void cleanup();
 
 public:
