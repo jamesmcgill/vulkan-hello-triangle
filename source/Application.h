@@ -1,7 +1,7 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h> // NB. don't include windows.h (or fmt) after glfw
+#include <GLFW/glfw3.h>    // NB. don't include windows.h (or fmt) after glfw
 
 #include <vector>
 #include <optional>
@@ -19,13 +19,23 @@ struct QueueFamilyIndices
 };
 
 //------------------------------------------------------------------------------
+struct SwapChainSupportDetails
+{
+  VkSurfaceCapabilitiesKHR capabilities;
+  std::vector<VkSurfaceFormatKHR> formats;
+  std::vector<VkPresentModeKHR> presentModes;
+};
+
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
 class Application
 {
-  GLFWwindow* m_window  = nullptr;
-  VkInstance m_instance = VK_NULL_HANDLE;
-  VkSurfaceKHR m_surface;
-  VkPhysicalDevice m_physicalDevice;
-  VkDevice m_device = VK_NULL_HANDLE;
+  GLFWwindow* m_window              = nullptr;
+  VkInstance m_instance             = VK_NULL_HANDLE;
+  VkSurfaceKHR m_surface            = VK_NULL_HANDLE;
+  VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
+  VkDevice m_device                 = VK_NULL_HANDLE;
   VkQueue m_graphicsQueue;
   VkQueue m_presentQueue;
 
@@ -39,8 +49,10 @@ class Application
   void createSurface();
   void pickPhysicalDevice();
   int rateDeviceSuitability(const VkPhysicalDevice& device);
-  void createLogicalDevice();
+  bool checkDeviceExtensionSupport(const VkPhysicalDevice& device);
+  SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
+  void createLogicalDevice();
   void cleanup();
 
 public:
