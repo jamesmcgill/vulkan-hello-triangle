@@ -10,6 +10,7 @@
 
 #include <map>
 #include <set>
+#include <algorithm>
 
 //------------------------------------------------------------------------------
 constexpr int WINDOW_WIDTH  = 800;
@@ -128,6 +129,12 @@ Application::setupDebugMessenger()
 void
 Application::createInstance()
 {
+  glfwInit();
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);    // not using OpenGL
+  glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);      // not resizable
+  m_window = glfwCreateWindow(
+    WINDOW_WIDTH, WINDOW_HEIGHT, "Vulkan hello triangle", nullptr, nullptr);
+
   if (ENABLE_VALIDATION_LAYERS && !checkValidationLayerSupport())
   {
     throw std::runtime_error("validation layers requested, but not available!");
@@ -387,45 +394,6 @@ Application::checkDeviceExtensionSupport(const VkPhysicalDevice& device)
   }
 
   return requiredExtensions.empty();
-
-}
-
-//------------------------------------------------------------------------------
-SwapChainSupportDetails
-Application::querySwapChainSupport(VkPhysicalDevice device)
-{
-  assert(device != VK_NULL_HANDLE);
-  assert(m_surface != VK_NULL_HANDLE);
-
-  SwapChainSupportDetails details;
-
-  // Surface Caps
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-    device, m_surface, &details.capabilities);
-
-  // Surface Formats
-  uint32_t formatCount;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(
-    device, m_surface, &formatCount, nullptr);
-  if (formatCount != 0)
-  {
-    details.formats.resize(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(
-      device, m_surface, &formatCount, details.formats.data());
-  }
-
-  // Presentation Modes
-  uint32_t presentModeCount;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(
-    device, m_surface, &presentModeCount, nullptr);
-  if (presentModeCount != 0)
-  {
-    details.presentModes.resize(presentModeCount);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(
-      device, m_surface, &presentModeCount, details.presentModes.data());
-  }
-
-  return details;
 }
 
 //------------------------------------------------------------------------------
@@ -483,8 +451,185 @@ Application::createLogicalDevice()
 
 //------------------------------------------------------------------------------
 void
+Application::createSwapChain()
+{
+  assert(m_physicalDevice != VK_NULL_HANDLE);
+  assert(m_surface != VK_NULL_HANDLE);
+
+  SwapChainSupportDetails swapChainSupport
+    = querySwapChainSupport(m_physicalDevice);
+  VkSurfaceFormatKHR surfaceFormat
+    = chooseSwapSurfaceFormat(swapChainSupport.formats);
+  VkPresentModeKHR presentMode
+    = chooseSwapPresentMode(swapChainSupport.presentModes);
+  VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
+
+  uint32_t imageCount = std::min(
+    swapChainSupport.capabilities.minImageCount + 1,
+    swapChainSupport.capabilities.maxImageCount);
+
+  VkSwapchainCreateInfoKHR createInfo = {};
+  createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+  createInfo.surface          = m_surface;
+  createInfo.minImageCount    = imageCount;
+  createInfo.imageFormat      = surfaceFormat.format;
+  createInfo.imageColorSpace  = surfaceFormat.colorSpace;
+  createInfo.imageExtent      = extent;
+  createInfo.imageArrayLayers = 1;
+  createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+  // QueueFamily sharing
+  QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
+  // NB. must remain in scope of createInfo
+  uint32_t queueFamilyIndices[]
+    = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+  if (indices.graphicsFamily != indices.presentFamily)
+  {
+    createInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
+    createInfo.queueFamilyIndexCount = 2;
+    createInfo.pQueueFamilyIndices   = queueFamilyIndices;
+  }
+  else
+  {
+    createInfo.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE;
+    createInfo.queueFamilyIndexCount = 0;          // Optional
+    createInfo.pQueueFamilyIndices   = nullptr;    // Optional
+  }
+
+  createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
+  createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  createInfo.presentMode    = presentMode;
+  createInfo.clipped        = VK_TRUE;
+  createInfo.oldSwapchain   = VK_NULL_HANDLE;
+
+  if (
+    vkCreateSwapchainKHR(m_device, &createInfo, nullptr, &m_swapChain)
+    != VK_SUCCESS)
+  {
+    throw std::runtime_error("failed to create swap chain!");
+  }
+
+  // Get Images: (find actual imageCount of created swap chain)
+  vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, nullptr);
+  m_swapChainImages.resize(imageCount);
+  vkGetSwapchainImagesKHR(
+    m_device, m_swapChain, &imageCount, m_swapChainImages.data());
+
+  m_swapChainImageFormat = surfaceFormat.format;
+  m_swapChainExtent      = extent;
+}
+
+//------------------------------------------------------------------------------
+SwapChainSupportDetails
+Application::querySwapChainSupport(VkPhysicalDevice device)
+{
+  assert(device != VK_NULL_HANDLE);
+  assert(m_surface != VK_NULL_HANDLE);
+
+  SwapChainSupportDetails details;
+
+  // Surface Caps
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+    device, m_surface, &details.capabilities);
+
+  // Surface Formats
+  uint32_t formatCount;
+  vkGetPhysicalDeviceSurfaceFormatsKHR(
+    device, m_surface, &formatCount, nullptr);
+  if (formatCount != 0)
+  {
+    details.formats.resize(formatCount);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(
+      device, m_surface, &formatCount, details.formats.data());
+  }
+
+  // Presentation Modes
+  uint32_t presentModeCount;
+  vkGetPhysicalDeviceSurfacePresentModesKHR(
+    device, m_surface, &presentModeCount, nullptr);
+  if (presentModeCount != 0)
+  {
+    details.presentModes.resize(presentModeCount);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(
+      device, m_surface, &presentModeCount, details.presentModes.data());
+  }
+
+  return details;
+}
+
+//------------------------------------------------------------------------------
+VkSurfaceFormatKHR
+Application::chooseSwapSurfaceFormat(
+  const std::vector<VkSurfaceFormatKHR>& availableFormats)
+{
+  for (const auto& availableFormat : availableFormats)
+  {
+    if (
+      availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM
+      && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+    {
+      return availableFormat;
+    }
+  }
+
+  if (availableFormats.empty())
+  {
+    throw std::runtime_error(
+      "no swapchain surface formats available to select");
+  }
+  return availableFormats[0];
+}
+
+//------------------------------------------------------------------------------
+VkPresentModeKHR
+Application::chooseSwapPresentMode(
+  const std::vector<VkPresentModeKHR>& availablePresentModes)
+{
+  const VkPresentModeKHR requestedMode = VK_PRESENT_MODE_MAILBOX_KHR;
+  VkPresentModeKHR bestFallbackMode    = VK_PRESENT_MODE_FIFO_KHR;
+
+  for (const auto& availablePresentMode : availablePresentModes)
+  {
+    if (availablePresentMode == requestedMode)
+    {
+      return requestedMode;
+    }
+    else if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR)
+    {
+      bestFallbackMode = availablePresentMode;
+    }
+  }
+
+  return bestFallbackMode;
+}
+
+//------------------------------------------------------------------------------
+VkExtent2D
+Application::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
+{
+  if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+  {
+    return capabilities.currentExtent;
+  }
+  else
+  {
+    VkExtent2D actualExtent = {WINDOW_WIDTH, WINDOW_HEIGHT};
+    actualExtent.width      = std::max(
+      capabilities.minImageExtent.width,
+      std::min(capabilities.maxImageExtent.width, actualExtent.width));
+
+    actualExtent.height = std::max(
+      capabilities.minImageExtent.height,
+      std::min(capabilities.maxImageExtent.height, actualExtent.height));
+    return actualExtent;
+  }
+}
+
+//------------------------------------------------------------------------------
+void
 Application::cleanup()
 {
+  vkDestroySwapchainKHR(m_device, m_swapChain, nullptr);
   vkDestroyDevice(m_device, nullptr);
   if (ENABLE_VALIDATION_LAYERS)
   {
@@ -500,17 +645,12 @@ Application::cleanup()
 void
 Application::init()
 {
-  glfwInit();
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);    // not using OpenGL
-  glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);      // not resizable
-  m_window = glfwCreateWindow(
-    WINDOW_WIDTH, WINDOW_HEIGHT, "Vulkan hello triangle", nullptr, nullptr);
-
   createInstance();
   setupDebugMessenger();
   createSurface();
   pickPhysicalDevice();
   createLogicalDevice();
+  createSwapChain();
 }
 
 //------------------------------------------------------------------------------
