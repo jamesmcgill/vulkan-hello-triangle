@@ -11,7 +11,7 @@ find_package(Vulkan REQUIRED)
 
 add_subdirectory(third_party/fmt-6.0.0 EXCLUDE_FROM_ALL)
 
-add_executable(vulkan-hello-triangle source/main.cpp)
+add_executable(vulkan-hello-triangle source/main.cpp source/Application.cpp)
 target_link_libraries(vulkan-hello-triangle PRIVATE fmt-header-only glfw glm Vulkan::Vulkan)
 target_compile_features(vulkan-hello-triangle PUBLIC cxx_std_17)
 
