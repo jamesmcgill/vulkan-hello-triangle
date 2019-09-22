@@ -6,19 +6,16 @@
 #include <vector>
 #include <optional>
 
-//------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 struct QueueFamilyIndices
 {
   std::optional<uint32_t> graphicsFamily;
   std::optional<uint32_t> presentFamily;
 
-  bool isComplete()
-  {
-    return graphicsFamily.has_value() && presentFamily.has_value();
-  }
+  bool isComplete() { return graphicsFamily.has_value() && presentFamily.has_value(); }
 };
 
-//------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 struct SwapChainSupportDetails
 {
   VkSurfaceCapabilitiesKHR capabilities;
@@ -26,9 +23,9 @@ struct SwapChainSupportDetails
   std::vector<VkPresentModeKHR> presentModes;
 };
 
-//------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 
-//------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 class Application
 {
   GLFWwindow* m_window              = nullptr;
@@ -42,7 +39,7 @@ class Application
   std::vector<VkImage> m_swapChainImages;
   std::vector<VkImageView> m_swapChainImageViews;
   VkFormat m_swapChainImageFormat;
-  VkExtent2D m_swapChainExtent; 
+  VkExtent2D m_swapChainExtent;
 
   void setupDebugMessenger();
 
@@ -60,10 +57,10 @@ class Application
 
   void createSwapChain();
   SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
-  VkSurfaceFormatKHR chooseSwapSurfaceFormat(
-    const std::vector<VkSurfaceFormatKHR>& availableFormats);
-  VkPresentModeKHR chooseSwapPresentMode(
-    const std::vector<VkPresentModeKHR>& availablePresentModes);
+  VkSurfaceFormatKHR
+  chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+  VkPresentModeKHR
+  chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
   VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
   void createImageViews();
@@ -76,4 +73,4 @@ public:
   void run();
 };
 
-//------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
