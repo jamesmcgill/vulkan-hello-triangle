@@ -18,7 +18,7 @@ struct QueueFamilyIndices
 //----------------------------------------------------------------------------------------
 struct SwapChainSupportDetails
 {
-  VkSurfaceCapabilitiesKHR capabilities;
+  VkSurfaceCapabilitiesKHR capabilities = {};
   std::vector<VkSurfaceFormatKHR> formats;
   std::vector<VkPresentModeKHR> presentModes;
 };
@@ -40,7 +40,9 @@ class Application
   std::vector<VkImageView> m_swapChainImageViews;
   VkFormat m_swapChainImageFormat;
   VkExtent2D m_swapChainExtent;
+  VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
 
+private:
   void setupDebugMessenger();
 
   void createInstance();
@@ -64,6 +66,10 @@ class Application
   VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
   void createImageViews();
+
+  VkShaderModule createShaderModule(const std::vector<char>& code);
+  void createGraphicsPipeline();
+
   void cleanup();
 
 public:
