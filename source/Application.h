@@ -40,7 +40,9 @@ class Application
   std::vector<VkImageView> m_swapChainImageViews;
   VkFormat m_swapChainImageFormat;
   VkExtent2D m_swapChainExtent;
+  VkRenderPass m_renderPass;
   VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
+  VkPipeline m_graphicsPipeline;
 
 private:
   void setupDebugMessenger();
@@ -66,6 +68,7 @@ private:
   VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
   void createImageViews();
+  void createRenderPass();
 
   VkShaderModule createShaderModule(const std::vector<char>& code);
   void createGraphicsPipeline();
