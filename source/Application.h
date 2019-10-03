@@ -43,6 +43,7 @@ class Application
   VkRenderPass m_renderPass;
   VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
   VkPipeline m_graphicsPipeline;
+  std::vector<VkFramebuffer> m_swapChainFramebuffers;
 
 private:
   void setupDebugMessenger();
@@ -72,6 +73,7 @@ private:
 
   VkShaderModule createShaderModule(const std::vector<char>& code);
   void createGraphicsPipeline();
+  void createFramebuffers();
 
   void cleanup();
 
