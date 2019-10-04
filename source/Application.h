@@ -51,6 +51,8 @@ class Application
   std::vector<VkFence> m_inFlightFences;
   size_t m_currentFrame = 0;
 
+  bool m_framebufferResized = false;
+
 private:
   void setupDebugMessenger();
 
@@ -85,6 +87,10 @@ private:
   void createSyncObjects();
 
   void drawFrame();
+
+  void recreateSwapChain();
+  void cleanupSwapChain();
+
   void cleanup();
 
 public:
@@ -92,6 +98,8 @@ public:
 
   void init();
   void run();
+
+  void setFramebufferResized() { m_framebufferResized = true; }
 };
 
 //----------------------------------------------------------------------------------------
