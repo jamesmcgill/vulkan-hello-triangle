@@ -44,6 +44,8 @@ class Application
   VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
   VkPipeline m_graphicsPipeline;
   std::vector<VkFramebuffer> m_swapChainFramebuffers;
+  VkCommandPool m_commandPool;
+  std::vector<VkCommandBuffer> m_commandBuffers;
 
 private:
   void setupDebugMessenger();
@@ -74,6 +76,8 @@ private:
   VkShaderModule createShaderModule(const std::vector<char>& code);
   void createGraphicsPipeline();
   void createFramebuffers();
+  void createCommandPool();
+  void createCommandBuffers();
 
   void cleanup();
 
