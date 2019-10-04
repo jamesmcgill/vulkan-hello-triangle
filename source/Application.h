@@ -46,6 +46,10 @@ class Application
   std::vector<VkFramebuffer> m_swapChainFramebuffers;
   VkCommandPool m_commandPool;
   std::vector<VkCommandBuffer> m_commandBuffers;
+  std::vector<VkSemaphore> m_imageAvailableSemaphores;
+  std::vector<VkSemaphore> m_renderFinishedSemaphores;
+  std::vector<VkFence> m_inFlightFences;
+  size_t m_currentFrame = 0;
 
 private:
   void setupDebugMessenger();
@@ -78,7 +82,9 @@ private:
   void createFramebuffers();
   void createCommandPool();
   void createCommandBuffers();
+  void createSyncObjects();
 
+  void drawFrame();
   void cleanup();
 
 public:
