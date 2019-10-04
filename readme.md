@@ -1,5 +1,13 @@
 
 # Vulkan hello, world triangle
+<img src="triangle.jpg" width="1147px"></img>
+
+Basic steps required to bootstrap a vulkan application.  
+Taken from https://vulkan-tutorial.com/  
+  
+Should be platform independent as using glfw and cmake build system  
+Shader compilation done through cmake  
+  
 
 ### Building on Windows 10 and Visual Studio 2019  
 
