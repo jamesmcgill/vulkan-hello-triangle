@@ -21,8 +21,5 @@ vcpkg install glfw3:x64-windows
 vcpkg install vulkan:x64-windows  
 ```
 
-
 ##### Build
-```
-build.bat
-```
+Run the provided `build.bat` from within the MSVC command prompt (`vcvarsall.bat`)
